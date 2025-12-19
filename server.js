@@ -2,13 +2,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const authRoutes = require("./routes/auth");
-const productRoutes = require("./routes/products");
-const orderRoutes = require("./routes/orders");
-const adminRoutes = require("./routes/admin");
+const connectDB = require("./config/database");
 const errorHandler = require("./middleware/error");
-const lookbookRoutes = require("./routes/lookbook");
+const passport = require("passport");
 
+// Load env vars
 dotenv.config();
 
 const app = express();
@@ -20,16 +18,21 @@ app.use(
     credentials: true,
   })
 );
+// Body parser
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("uploads"));
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/lookbook", lookbookRoutes);
+// Passport middleware
+app.use(passport.initialize());
+
+// Passport config
+require("./config/passport");
+
+// Mount routers
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/products", require("./routes/products"));
+app.use("/api/orders", require("./routes/orders"));
+app.use("/api/admin", require("./routes/admin"));
+app.use("/api/lookbook", require("./routes/lookbook"));
 
 // Error handling
 app.use(errorHandler);

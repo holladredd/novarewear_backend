@@ -1,8 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const { body } = require("express-validator");
-const { register, login, getMe } = require("../controllers/authController");
+const {
+  register,
+  login,
+  getMe,
+  refreshToken,
+  googleCallback,
+} = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
+const passport = require("passport");
 
 // @route   POST /api/auth/register
 // @desc    Register user
@@ -28,6 +35,25 @@ router.post(
   ],
   login
 );
+
+// @route   GET /api/auth/google
+// @desc    Login with Google
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+// @route   GET /api/auth/google/callback
+// @desc    Google auth callback
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false }),
+  googleCallback
+);
+
+// @route   POST /api/auth/refresh
+// @desc    Refresh access token
+router.post("/refresh", refreshToken);
 
 // @route   GET /api/auth/me
 // @desc    Get current user
