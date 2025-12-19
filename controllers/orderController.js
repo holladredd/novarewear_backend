@@ -1,0 +1,136 @@
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+
+// @desc    Create new order
+// @route   POST /api/orders
+exports.createOrder = async (req, res) => {
+  try {
+    const { items, shippingAddress, paymentMethod } = req.body;
+
+    // Calculate prices
+    let orderItems = [];
+    let totalPrice = 0;
+
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.product}` });
+      }
+
+      if (product.inStock < item.quantity) {
+        return res
+          .status(400)
+          .json({ message: `Insufficient stock for ${product.name}` });
+      }
+
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: item.quantity,
+        size: item.size,
+      });
+
+      totalPrice += product.price * item.quantity;
+    }
+
+    // Create order
+    const order = await Order.create({
+      user: req.user.id,
+      items: orderItems,
+      shippingAddress,
+      paymentMethod,
+      totalPrice: totalPrice + 15, // + shipping
+      shippingPrice: 15,
+    });
+
+    // Update stock
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { inStock: -item.quantity },
+      });
+    }
+
+    res.status(201).json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Get user orders
+// @route   GET /api/orders/myorders
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .populate("items.product", "name images");
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Get single order
+// @route   GET /api/orders/:id
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email")
+      .populate("items.product", "name images");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check if user owns the order or is admin
+    if (
+      order.user._id.toString() !== req.user.id &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    res.json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Get all orders (Admin)
+// @route   GET /api/orders
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .sort({ createdAt: -1 })
+      .populate("user", "name email")
+      .populate("items.product", "name");
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Update order status (Admin)
+// @route   PUT /api/orders/:id/status
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.status = status;
+    if (status === "delivered") {
+      order.deliveredAt = Date.now();
+    }
+
+    await order.save();
+    res.json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
