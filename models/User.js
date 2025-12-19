@@ -4,6 +4,12 @@ const crypto = require("crypto");
 
 const UserSchema = new mongoose.Schema(
   {
+    firstName: {
+      type: String,
+    },
+    lastName: {
+      type: String,
+    },
     username: {
       type: String,
       required: [true, "Please add a username"],
@@ -20,7 +26,6 @@ const UserSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      required: [true, "Please add a phone number"],
     },
     password: {
       type: String,
@@ -35,8 +40,16 @@ const UserSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    authenticated: {
+      type: Boolean,
+      default: false,
+    },
     avatar: {
       type: String,
+    },
+    balance: {
+      type: Number,
+      default: 0,
     },
     shippingAddress: {
       address: { type: String },
@@ -44,6 +57,30 @@ const UserSchema = new mongoose.Schema(
       postalCode: { type: String },
       country: { type: String },
     },
+    billingAddress: {
+      address: { type: String },
+      city: { type: String },
+      postalCode: { type: String },
+      country: { type: String },
+    },
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+    cart: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+        quantity: {
+          type: Number,
+          default: 1,
+        },
+      },
+    ],
     orders: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -64,15 +101,14 @@ const UserSchema = new mongoose.Schema(
 // Hash password before saving
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Match user entered password to hashed password in database
-UserSchema.methods.matchPassword = async function (enteredPassword) {
+UserSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

@@ -4,6 +4,7 @@ const { body } = require("express-validator");
 const {
   register,
   login,
+  logout,
   getMe,
   refreshToken,
   googleCallback,
@@ -39,6 +40,10 @@ router.post(
   ],
   login
 );
+
+// @route   POST /api/auth/logout
+// @desc    Logout user
+router.post("/logout", logout);
 
 // @route   PATCH /api/auth/updateprofile
 // @desc    Update user profile

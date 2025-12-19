@@ -81,7 +81,7 @@ exports.login = async (req, res) => {
     // Check for user by email or username
     const user = await User.findOne({
       $or: [{ email: login }, { username: login }],
-    });
+    }).select("+password");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -97,6 +97,7 @@ exports.login = async (req, res) => {
 
     // Save refresh token to user
     user.refreshToken = refreshToken;
+    user.authenticated = true;
     await user.save();
 
     res.cookie("refreshToken", refreshToken, {
@@ -250,6 +251,31 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
+// @desc    Logout user
+// @route   POST /api/auth/logout
+exports.logout = async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  if (!refreshToken) {
+    return res.sendStatus(204); // No content
+  }
+
+  const user = await User.findOne({ refreshToken });
+  if (user) {
+    user.refreshToken = null;
+    user.authenticated = false;
+    await user.save();
+  }
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  res.json({ success: true, message: "Logged out successfully" });
+};
+
 // @desc    Get logged in user
 // @route   GET /api/auth/me
 exports.getMe = async (req, res) => {
@@ -267,20 +293,43 @@ exports.getMe = async (req, res) => {
 // @desc    Login with Google
 // @route   GET /api/auth/google/callback
 // @access  Public
-exports.googleCallback = (req, res) => {
-  const accessToken = generateAccessToken(req.user.id);
-  const refreshToken = generateRefreshToken(req.user.id);
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const accessToken = generateAccessToken(req.user.id);
+    const refreshToken = generateRefreshToken(req.user.id);
 
-  // Save refresh token to user
-  req.user.refreshToken = refreshToken;
-  req.user.save();
+    // Save refresh token to user
+    req.user.refreshToken = refreshToken;
+    req.user.authenticated = true;
+    await req.user.save();
 
-  res
-    .cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
-    .json({ success: true, accessToken });
+    res
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+      .json({
+        success: true,
+        accessToken,
+        user: req.user,
+      });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    res.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };

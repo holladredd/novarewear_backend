@@ -29,11 +29,20 @@ passport.use(
           return done(null, user);
         }
 
+        // Generate a unique username
+        let username = profile.emails[0].value.split("@")[0];
+        let userExists = await User.findOne({ username });
+        if (userExists) {
+          username = `${username}_${profile.id.slice(0, 5)}`;
+        }
+
         // Create a new user
         user = await User.create({
           googleId: profile.id,
-          name: profile.displayName,
+          firstName: profile.name.givenName,
+          lastName: profile.name.familyName,
           email: profile.emails[0].value,
+          username: username,
           avatar: profile.photos[0].value,
         });
 
