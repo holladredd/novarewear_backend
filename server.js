@@ -14,7 +14,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000", // Your Next.js frontend
+    origin: [process.env.CLIENT_URL, "http://localhost:3000"], // Allow both live and local frontend
     credentials: true,
   })
 );
