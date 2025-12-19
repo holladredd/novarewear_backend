@@ -7,6 +7,9 @@ const {
   getMe,
   refreshToken,
   googleCallback,
+  updateProfile,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 const passport = require("passport");
@@ -16,8 +19,9 @@ const passport = require("passport");
 router.post(
   "/register",
   [
-    body("name", "Name is required").not().isEmpty(),
+    body("username", "Username is required").not().isEmpty(),
     body("email", "Please include a valid email").isEmail(),
+    body("phoneNumber", "Phone number is required").not().isEmpty(),
     body("password", "Password must be at least 6 characters").isLength({
       min: 6,
     }),
@@ -30,11 +34,23 @@ router.post(
 router.post(
   "/login",
   [
-    body("email", "Please include a valid email").isEmail(),
+    body("login", "Email or username is required").not().isEmpty(),
     body("password", "Password is required").exists(),
   ],
   login
 );
+
+// @route   PATCH /api/auth/updateprofile
+// @desc    Update user profile
+router.patch("/updateprofile", protect, updateProfile);
+
+// @route   POST /api/auth/forgotpassword
+// @desc    Forgot password
+router.post("/forgotpassword", forgotPassword);
+
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @desc    Reset password
+router.put("/resetpassword/:resettoken", resetPassword);
 
 // @route   GET /api/auth/google
 // @desc    Login with Google

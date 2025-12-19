@@ -1,11 +1,13 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 const UserSchema = new mongoose.Schema(
   {
-    name: {
+    username: {
       type: String,
-      required: [true, "Please add a name"],
+      required: [true, "Please add a username"],
+      unique: true,
     },
     email: {
       type: String,
@@ -16,9 +18,12 @@ const UserSchema = new mongoose.Schema(
         "Please add a valid email",
       ],
     },
+    phoneNumber: {
+      type: String,
+      required: [true, "Please add a phone number"],
+    },
     password: {
       type: String,
-      // required: [true, "Please add a password"],
       minlength: 6,
       select: false,
     },
@@ -32,14 +37,12 @@ const UserSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: "/user/avatar.png",
     },
     shippingAddress: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: String,
+      address: { type: String },
+      city: { type: String },
+      postalCode: { type: String },
+      country: { type: String },
     },
     orders: [
       {
@@ -47,6 +50,11 @@ const UserSchema = new mongoose.Schema(
         ref: "Order",
       },
     ],
+    refreshToken: {
+      type: String,
+    },
+    passwordResetToken: String,
+    passwordResetExpire: Date,
   },
   {
     timestamps: true,
@@ -56,15 +64,33 @@ const UserSchema = new mongoose.Schema(
 // Hash password before saving
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
-    next();
+    return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 // Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Generate and hash password reset token
+UserSchema.methods.getResetPasswordToken = function () {
+  // Generate token
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  // Hash token and set to resetPasswordToken field
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Set expire
+  this.passwordResetExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return resetToken;
 };
 
 module.exports = mongoose.model("User", UserSchema);
