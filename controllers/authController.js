@@ -303,33 +303,23 @@ exports.googleCallback = async (req, res, next) => {
     req.user.authenticated = true;
     await req.user.save();
 
-    res
-      .cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      })
-      .json({
-        success: true,
-        accessToken,
-        user: req.user,
-      });
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Redirect to frontend with token and user info
+    const userString = JSON.stringify(req.user);
+    res.redirect(
+      `${
+        process.env.CLIENT_URL
+      }/auth/google/callback?accessToken=${accessToken}&user=${encodeURIComponent(
+        userString
+      )}`
+    );
   } catch (error) {
     next(error);
-  }
-};
-
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
-exports.getMe = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    res.json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
