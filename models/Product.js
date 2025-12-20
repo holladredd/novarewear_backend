@@ -15,7 +15,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["Tees", "Hoodies", "Pants", "Accessories"],
+      enum: ["Tees", "Hoodies", "Pants", "Jackets", "Shorts", "Accessories"],
     },
     price: {
       type: Number,
@@ -32,23 +32,26 @@ const productSchema = new mongoose.Schema(
         required: true,
       },
     ],
-    inStock: {
-      type: Number,
-      default: 0,
+    inStock: { type: Number, required: true, default: 0 },
+    sizes: {
+      type: [String],
+      required: true,
+      enum: [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL",
+        "One Size",
+        "30",
+        "32",
+        "34",
+        "36",
+      ],
     },
-    lookbookId: {
-      type: Number,
-    },
-    isFeatured: {
-      type: Boolean,
-      default: false,
-    },
-    sizes: [
-      {
-        type: String,
-        enum: ["XS", "S", "M", "L", "XL", "XXL"],
-      },
-    ],
+    lookbookId: { type: Number },
+    isFeatured: { type: Boolean, default: false },
   },
   {
     timestamps: true,

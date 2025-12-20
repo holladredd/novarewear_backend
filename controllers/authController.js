@@ -127,31 +127,76 @@ exports.login = async (req, res) => {
 // @route   PATCH /api/auth/updateprofile
 exports.updateProfile = async (req, res) => {
   try {
-    const { username, email, phoneNumber } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.username = username || user.username;
-    user.email = email || user.email;
-    user.phoneNumber = phoneNumber || user.phoneNumber;
+    // Fields that are not allowed to be updated from this endpoint
+    const notAllowedFields = [
+      "role",
+      "password",
+      "googleId",
+      "_id",
+      "email", // Email changes should have a separate, secure verification process
+      "orders",
+      "wishlist",
+      "cart",
+      "balance",
+      "authenticated",
+      "refreshToken",
+      "passwordResetToken",
+      "passwordResetExpire",
+    ];
+
+    // Dynamically update user fields from request body
+    Object.keys(req.body).forEach((key) => {
+      if (!notAllowedFields.includes(key)) {
+        // Handle nested objects like shippingAddress and billingAddress
+        if (
+          (key === "shippingAddress" || key === "billingAddress") &&
+          typeof req.body[key] === "object" &&
+          req.body[key] !== null
+        ) {
+          Object.keys(req.body[key]).forEach((nestedKey) => {
+            if (user[key]) {
+              user[key][nestedKey] = req.body[key][nestedKey];
+            }
+          });
+        } else {
+          user[key] = req.body[key];
+        }
+      }
+    });
 
     const updatedUser = await user.save();
 
+    // Return a sanitized user object
+    const sanitizedUser = {
+      id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      shippingAddress: updatedUser.shippingAddress,
+      billingAddress: updatedUser.billingAddress,
+    };
+
     res.json({
       success: true,
-      user: {
-        id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        phoneNumber: updatedUser.phoneNumber,
-        role: updatedUser.role,
-        avatar: updatedUser.avatar,
-      },
+      user: sanitizedUser,
     });
   } catch (error) {
+    // Provide more detailed error messages for validation errors
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation error", errors: error.errors });
+    }
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
