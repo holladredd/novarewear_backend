@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Product = require("../models/Product");
-const Lookbook = require("../models/Lookbook");
+const Lookbook = require("../models/Lookbooks");
 require("dotenv").config();
 
 const products = [

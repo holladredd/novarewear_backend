@@ -1,14 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const {
-  getLookbook,
+  getLookbooks,
+  getLookbookBySlug,
   createLookbook,
   updateLookbook,
 } = require("../controllers/lookbookController");
 const { protect, admin } = require("../middleware/auth");
 
-router.get("/", getLookbook);
-router.post("/", protect, admin, createLookbook);
-router.put("/:id", protect, admin, updateLookbook);
+router.route("/").get(getLookbooks).post(protect, admin, createLookbook);
+router
+  .route("/:slug")
+  .get(getLookbookBySlug)
+  .put(protect, admin, updateLookbook);
 
 module.exports = router;
