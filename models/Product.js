@@ -33,6 +33,11 @@ const productSchema = new mongoose.Schema(
       },
     ],
     inStock: { type: Number, required: true, default: 0 },
+    lookImages: [
+      {
+        type: String,
+      },
+    ],
     sizes: {
       type: [String],
       required: true,

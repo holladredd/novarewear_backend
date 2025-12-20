@@ -139,3 +139,18 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// @desc    Get all products that have look images for the lookbook gallery
+// @route   GET /api/products/lookbook
+// @access  Public
+exports.getLookbookProducts = async (req, res) => {
+  try {
+    const products = await Product.find({
+      lookImages: { $exists: true, $ne: [] }, // Find products where lookImages exists and is not empty
+    }).select("name slug lookImages");
+
+    res.json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

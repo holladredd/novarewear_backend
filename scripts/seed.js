@@ -16,9 +16,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
+      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800",
+    ],
     inStock: 100,
     sizes: ["S", "M", "L", "XL"],
-    lookbookId: 1,
     isFeatured: true,
   },
   {
@@ -31,9 +34,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1622470953794-3150725db5b3?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1554412933-514a83d2f3c8?w=800",
+      "https://images.unsplash.com/photo-1581351721429-7b22874c3333?w=800",
+    ],
     inStock: 120,
     sizes: ["S", "M", "L"],
-    lookbookId: 4,
     isFeatured: false,
   },
   {
@@ -46,9 +52,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1503341504253-dff485842510?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1527719327859-c6ce80353573?w=800",
+      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
+    ],
     inStock: 80,
     sizes: ["S", "M", "L"],
-    lookbookId: 1,
     isFeatured: true,
   },
   {
@@ -60,9 +69,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1519758394492-e65d29213a24?w=800",
+      "https://images.unsplash.com/photo-1620012818693-23c1b0354c47?w=800",
+    ],
     inStock: 70,
     sizes: ["M", "L", "XL"],
-    lookbookId: 3,
     isFeatured: false,
   },
   // Hoodies
@@ -76,9 +88,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1532356884227-66d7c0e9e4c2?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1509942774463-acf339cf87d5?w=800",
+      "https://images.unsplash.com/photo-1556316384-1ab37f25244a?w=800",
+    ],
     inStock: 60,
     sizes: ["S", "M", "L", "XL"],
-    lookbookId: 4,
     isFeatured: false,
   },
   {
@@ -89,9 +104,12 @@ const products = [
     description:
       "The official Novare hoodie. Made with a soft fleece interior.",
     images: ["https://images.unsplash.com/photo-1556103615-6a233b4cec43?w=800"],
+    lookImages: [
+      "https://images.unsplash.com/photo-1548288862-b57635d7a2c2?w=800",
+      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800",
+    ],
     inStock: 50,
     sizes: ["M", "L", "XL"],
-    lookbookId: 2,
     isFeatured: true,
   },
   // Pants
@@ -105,9 +123,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1604176354204-926873782854?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800",
+      "https://images.unsplash.com/photo-1605518216944-435a7ade2686?w=800",
+    ],
     inStock: 45,
     sizes: ["30", "32", "34", "36"],
-    lookbookId: 3,
     isFeatured: false,
   },
   {
@@ -119,9 +140,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1560243563-062bfc001d68?w=800",
+      "https://images.unsplash.com/photo-1542272604-787c3855a15d?w=800",
+    ],
     inStock: 55,
     sizes: ["30", "32", "34"],
-    lookbookId: 1,
     isFeatured: true,
   },
   {
@@ -134,9 +158,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1624378439575-d87059d70231?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800",
+      "https://images.unsplash.com/photo-1548960094-7c989618a2d4?w=800",
+    ],
     inStock: 75,
     sizes: ["S", "M", "L", "XL"],
-    lookbookId: 4,
     isFeatured: false,
   },
   // Jackets
@@ -148,9 +175,12 @@ const products = [
     description:
       "A timeless denim jacket with a modern fit. Features custom Nova buttons.",
     images: ["https://images.unsplash.com/photo-1543072214-6b525371c861?w=800"],
+    lookImages: [
+      "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800",
+      "https://images.unsplash.com/photo-1595950653106-60904f39b8f2?w=800",
+    ],
     inStock: 25,
     sizes: ["M", "L"],
-    lookbookId: 2,
     isFeatured: true,
   },
   {
@@ -163,9 +193,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1591047139829-d919b5ca4d57?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800",
+      "https://images.unsplash.com/photo-1612387654304-98a6235ba312?w=800",
+    ],
     inStock: 0, // Out of stock example
     sizes: ["S", "M", "L", "XL"],
-    lookbookId: 3,
     isFeatured: false,
   },
   // Shorts
@@ -178,9 +211,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1605518216944-435a7ade2686?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1591130901921-3f0655bb3b4a?w=800",
+      "https://images.unsplash.com/photo-1619086303291-0ef7699e4b31?w=800",
+    ],
     inStock: 40,
     sizes: ["30", "32", "34"],
-    lookbookId: 1,
     isFeatured: false,
   },
   // Accessories
@@ -193,9 +229,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1529958030586-3aae4ca485ff?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1588791938999-3a14a1a5d4d3?w=800",
+      "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800",
+    ],
     inStock: 90,
     sizes: ["One Size"],
-    lookbookId: 2,
     isFeatured: false,
   },
   {
@@ -208,9 +247,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1608231387042-66d244642752?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1591195853828-11db59a41f6b?w=800",
+      "https://images.unsplash.com/photo-1611312449412-6cefac5dc3e4?w=800",
+    ],
     inStock: 150,
     sizes: ["One Size"],
-    lookbookId: 4,
     isFeatured: false,
   },
   {
@@ -222,9 +264,12 @@ const products = [
     images: [
       "https://images.unsplash.com/photo-1575428652377-a3d817367424?w=800",
     ],
+    lookImages: [
+      "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=800",
+      "https://images.unsplash.com/photo-1614442122444-84737a0f3672?w=800",
+    ],
     inStock: 65,
     sizes: ["One Size"],
-    lookbookId: 3,
     isFeatured: false,
   },
 ];
@@ -266,22 +311,12 @@ const seedDatabase = async () => {
 
     // Clear existing data
     await Product.deleteMany({});
-    await Lookbook.deleteMany({});
+    await Lookbook.deleteMany({}); // Keep this to clear the old collection
 
     // Insert products
-    const createdProducts = await Product.insertMany(products);
+    await Product.insertMany(products);
 
-    // Update lookbook with product references
-    for (let i = 0; i < lookbookItems.length; i++) {
-      const product = createdProducts.find((p) => p.lookbookId === i + 1);
-      if (product) {
-        lookbookItems[i].products.push(product._id);
-      }
-    }
-
-    await Lookbook.insertMany(lookbookItems);
-
-    console.log("Database seeded successfully!");
+    console.log("Database seeded successfully with new product structure!");
     process.exit();
   } catch (error) {
     console.error("Seeding error:", error);

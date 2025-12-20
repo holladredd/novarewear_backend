@@ -6,11 +6,13 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getLookbookProducts,
 } = require("../controllers/productController");
 const { protect, admin } = require("../middleware/auth");
 
 // Public routes
 router.get("/", getProducts);
+router.get("/lookbook", getLookbookProducts);
 router.get("/:slug", getProductBySlug);
 
 // Admin only routes
