@@ -1,24 +1,31 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const User = require("../models/User");
 
-// @desc    Create new order
+// @desc    Create new order from cart
 // @route   POST /api/orders
 exports.createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { shippingAddress, paymentMethod } = req.body;
 
-    // Calculate prices
+    const user = await User.findById(req.user.id).populate({
+      path: "cart.product",
+      model: "Product",
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.cart.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
     let orderItems = [];
     let totalPrice = 0;
 
-    for (const item of items) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        return res
-          .status(404)
-          .json({ message: `Product not found: ${item.product}` });
-      }
-
+    for (const item of user.cart) {
+      const product = item.product;
       if (product.inStock < item.quantity) {
         return res
           .status(400)
@@ -30,7 +37,7 @@ exports.createOrder = async (req, res) => {
         name: product.name,
         price: product.price,
         quantity: item.quantity,
-        size: item.size,
+        size: item.size, // Assuming size is stored in cart item
       });
 
       totalPrice += product.price * item.quantity;
@@ -47,11 +54,16 @@ exports.createOrder = async (req, res) => {
     });
 
     // Update stock
-    for (const item of items) {
+    for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { inStock: -item.quantity },
       });
     }
+
+    // Clear cart and add order to user's history
+    user.cart = [];
+    user.orders.push(order._id);
+    await user.save();
 
     res.status(201).json({ success: true, order });
   } catch (error) {
