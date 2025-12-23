@@ -9,7 +9,6 @@ const orderSchema = new mongoose.Schema(
     },
     orderNumber: {
       type: String,
-      required: true,
       unique: true,
     },
     items: [
@@ -31,8 +30,8 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       street: { type: String, required: true },
       city: { type: String, required: true },
-      state: { type: String, required: true },
-      zipCode: { type: String, required: true },
+      state: { type: String },
+      zipCode: { type: String },
       country: { type: String, required: true },
     },
     paymentMethod: {
@@ -63,13 +62,5 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
-// Generate order number before saving
-orderSchema.pre("save", function (next) {
-  if (!this.orderNumber) {
-    this.orderNumber = "NOV-" + Date.now().toString().slice(-8);
-  }
-  next();
-});
 
 module.exports = mongoose.model("Order", orderSchema);

@@ -1,4 +1,28 @@
 const Product = require("../models/Product");
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+
+// Helper function to get user from token
+const getUserFromToken = async (req) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return await User.findById(decoded.id);
+  } catch (error) {
+    return null;
+  }
+};
 
 // @desc    Get all products with advanced filtering and sorting
 // @route   GET /api/products
@@ -68,9 +92,23 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find(query)
       .sort(sortOption)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean(); // Use .lean() for better performance
 
     const total = await Product.countDocuments(query);
+
+    // Check for user and add isWishlisted flag
+    const user = await getUserFromToken(req);
+    if (user) {
+      const userWishlist = user.wishlist.map((id) => id.toString());
+      products.forEach((product) => {
+        product.isWishlisted = userWishlist.includes(product._id.toString());
+      });
+    } else {
+      products.forEach((product) => {
+        product.isWishlisted = false;
+      });
+    }
 
     res.json({
       success: true,
@@ -88,53 +126,21 @@ exports.getProducts = async (req, res) => {
 // @route   GET /api/products/:slug
 exports.getProductBySlug = async (req, res) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug });
+    const product = await Product.findOne({ slug: req.params.slug }).lean(); // Use .lean()
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // Check for user and add isWishlisted flag
+    const user = await getUserFromToken(req);
+    if (user) {
+      const userWishlist = user.wishlist.map((id) => id.toString());
+      product.isWishlisted = userWishlist.includes(product._id.toString());
+    } else {
+      product.isWishlisted = false;
+    }
+
     res.json({ success: true, product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// @desc    Create product (Admin only)
-// @route   POST /api/products
-exports.createProduct = async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.status(201).json({ success: true, product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// @desc    Update product (Admin only)
-// @route   PUT /api/products/:id
-exports.updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    res.json({ success: true, product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// @desc    Delete product (Admin only)
-// @route   DELETE /api/products/:id
-exports.deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    res.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

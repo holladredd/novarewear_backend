@@ -1,4 +1,5 @@
 const errorHandler = (err, req, res, next) => {
+  console.error("ERROR =>", err); // Add this line to log the error
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode);
   res.json({
