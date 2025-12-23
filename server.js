@@ -2,12 +2,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const connectDB = require("./config/database");
-const errorHandler = require("./middleware/error");
 const passport = require("passport");
 
-// Load env vars
+// Load env vars BEFORE anything else
 dotenv.config();
+
+// Now, require the other modules
+const connectDB = require("./config/database");
+const errorHandler = require("./middleware/error");
 
 const app = express();
 

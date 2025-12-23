@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Product = require("../models/Product");
+const cloudinary = require("cloudinary").v2;
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/admin/users
@@ -108,12 +109,34 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 // @desc    Create product (Admin only)
 // @route   POST /api/admin/products
 // @access  Private/Admin
 exports.createProduct = async (req, res) => {
   try {
-    const product = await Product.create(req.body);
+    const { body, files } = req;
+
+    // Map uploaded files to the format expected by the schema
+    const images = files.images
+      ? files.images.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+    const lookImages = files.lookImages
+      ? files.lookImages.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+
+    const product = await Product.create({
+      ...body,
+      images,
+      lookImages,
+    });
+
     res.status(201).json({ success: true, product });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -125,14 +148,77 @@ exports.createProduct = async (req, res) => {
 // @access  Private/Admin
 exports.updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const { params, body, files } = req;
+
+    const product = await Product.findById(params.id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.json({ success: true, product });
+
+    // --- Image Deletion ---
+    // The frontend sends the array of existing images to keep as a JSON string.
+    // We compare it with images in the DB to find which ones to delete.
+    if (body.images) {
+      const imagesToKeep = JSON.parse(body.images).map((img) => img.public_id);
+      const imagesToDelete = product.images
+        .filter((img) => !imagesToKeep.includes(img.public_id))
+        .map((img) => img.public_id);
+      if (imagesToDelete.length > 0) {
+        await cloudinary.api.delete_resources(imagesToDelete);
+      }
+    }
+
+    // Repeat for lookImages
+    if (body.lookImages) {
+      const lookImagesToKeep = JSON.parse(body.lookImages).map(
+        (img) => img.public_id
+      );
+      const lookImagesToDelete = product.lookImages
+        .filter((img) => !lookImagesToKeep.includes(img.public_id))
+        .map((img) => img.public_id);
+      if (lookImagesToDelete.length > 0) {
+        await cloudinary.api.delete_resources(lookImagesToDelete);
+      }
+    }
+
+    // --- Image Addition ---
+    const newImages = files.images
+      ? files.images.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+    const newLookImages = files.lookImages
+      ? files.lookImages.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+
+    const finalImages = [
+      ...(body.images ? JSON.parse(body.images) : []),
+      ...newImages,
+    ];
+    const finalLookImages = [
+      ...(body.lookImages ? JSON.parse(body.lookImages) : []),
+      ...newLookImages,
+    ];
+
+    // Prepare data for the final update
+    const updateData = { ...body };
+    updateData.images = finalImages;
+    updateData.lookImages = finalLookImages;
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      params.id,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    res.json({ success: true, product: updatedProduct });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -143,11 +229,28 @@ exports.updateProduct = async (req, res) => {
 // @access  Private/Admin
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.json({ success: true, message: "Product deleted successfully" });
+
+    // Delete all associated images from Cloudinary
+    const imageIds = product.images.map((img) => img.public_id);
+    if (imageIds.length > 0) {
+      await cloudinary.api.delete_resources(imageIds);
+    }
+
+    const lookImageIds = product.lookImages.map((img) => img.public_id);
+    if (lookImageIds.length > 0) {
+      await cloudinary.api.delete_resources(lookImageIds);
+    }
+
+    await product.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Product and associated images deleted",
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

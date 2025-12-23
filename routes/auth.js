@@ -14,6 +14,7 @@ const {
 } = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 const passport = require("passport");
+const upload = require("../config/cloudinary");
 
 // @route   POST /api/auth/register
 // @desc    Register user
@@ -47,7 +48,7 @@ router.post("/logout", logout);
 
 // @route   PATCH /api/auth/updateprofile
 // @desc    Update user profile
-router.patch("/updateprofile", protect, updateProfile);
+router.patch("/updateprofile", protect, upload.single("avatar"), updateProfile);
 
 // @route   POST /api/auth/forgotpassword
 // @desc    Forgot password

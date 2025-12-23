@@ -45,7 +45,15 @@ const UserSchema = new mongoose.Schema(
       default: false,
     },
     avatar: {
-      type: String,
+      url: {
+        type: String,
+        default:
+          "https://res.cloudinary.com/dwhh0bwl5/image/upload/v1700426301/avatars/default_avatar.png",
+      },
+      public_id: {
+        type: String,
+        default: "avatars/default_avatar",
+      },
     },
     balance: {
       type: Number,

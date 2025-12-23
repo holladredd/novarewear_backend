@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { validationResult } = require("express-validator");
 const sendEmail = require("../utils/sendEmail");
+const cloudinary = require("cloudinary").v2;
 
 // Generate JWT Access Token
 const generateAccessToken = (id) => {
@@ -133,6 +134,14 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Sanitize the user object right after loading to handle legacy avatar strings
+    if (!user.avatar || typeof user.avatar !== "object") {
+      user.avatar = {
+        url: "https://res.cloudinary.com/dwhh0bwl5/image/upload/v1700426301/avatars/default_avatar.png",
+        public_id: "avatars/default_avatar",
+      };
+    }
+
     // Fields that are not allowed to be updated from this endpoint
     const notAllowedFields = [
       "role",
@@ -148,6 +157,7 @@ exports.updateProfile = async (req, res) => {
       "refreshToken",
       "passwordResetToken",
       "passwordResetExpire",
+      "avatar", // Avatar is handled separately via file upload
     ];
 
     // Dynamically update user fields from request body
@@ -169,6 +179,21 @@ exports.updateProfile = async (req, res) => {
         }
       }
     });
+
+    // Handle avatar upload if a file is provided
+    if (req.file) {
+      // If there's an existing avatar and it's not the default one, delete it from Cloudinary
+      if (
+        user.avatar.public_id &&
+        user.avatar.public_id !== "avatars/default_avatar"
+      ) {
+        await cloudinary.uploader.destroy(user.avatar.public_id);
+      }
+
+      // Update avatar with new image
+      user.avatar.url = req.file.path;
+      user.avatar.public_id = req.file.filename;
+    }
 
     const updatedUser = await user.save();
 

@@ -28,14 +28,15 @@ const productSchema = new mongoose.Schema(
     },
     images: [
       {
-        type: String,
-        required: true,
+        url: { type: String, required: true },
+        public_id: { type: String, required: true },
       },
     ],
     inStock: { type: Number, required: true, default: 0 },
     lookImages: [
       {
-        type: String,
+        url: { type: String, required: true },
+        public_id: { type: String, required: true },
       },
     ],
     sizes: {

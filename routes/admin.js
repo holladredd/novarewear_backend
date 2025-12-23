@@ -12,6 +12,7 @@ const {
   deleteProduct,
 } = require("../controllers/adminController");
 const { protect, admin } = require("../middleware/auth");
+const upload = require("../config/cloudinary"); // Import the upload middleware
 
 // All these routes are protected and for admins only
 router.use(protect, admin);
@@ -25,9 +26,27 @@ router
   .delete(deleteUser);
 
 // Product management routes
-router.route("/products").get(getProducts);
-router.route("/products/:id").get(getProductById);
-router.route("/products").post(createProduct);
-router.route("/products/:id").put(updateProduct).delete(deleteProduct);
+router
+  .route("/products")
+  .get(getProducts)
+  .post(
+    upload.fields([
+      { name: "images", maxCount: 10 },
+      { name: "lookImages", maxCount: 10 },
+    ]),
+    createProduct
+  );
+
+router
+  .route("/products/:id")
+  .get(getProductById)
+  .put(
+    upload.fields([
+      { name: "images", maxCount: 10 },
+      { name: "lookImages", maxCount: 10 },
+    ]),
+    updateProduct
+  )
+  .delete(deleteProduct);
 
 module.exports = router;
