@@ -21,7 +21,14 @@ exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      const formattedErrors = errors
+        .array()
+        .map((err) => ({ field: err.param, message: err.msg }));
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: formattedErrors,
+      });
     }
 
     const { username, email, phoneNumber, password } = req.body;
@@ -29,9 +36,19 @@ exports.register = async (req, res) => {
     // Check if user exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
     if (userExists) {
+      const errors = [];
+      if (userExists.email === email) {
+        errors.push({ field: "email", message: "Email is already registered" });
+      }
+      if (userExists.username === username) {
+        errors.push({
+          field: "username",
+          message: "Username is already taken",
+        });
+      }
       return res
         .status(400)
-        .json({ message: "Email or username already registered" });
+        .json({ success: false, message: "User already exists", errors });
     }
 
     // Create user
@@ -69,7 +86,12 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Register Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An unexpected server error occurred.",
+      error: error.message,
+    });
   }
 };
 
@@ -83,14 +105,26 @@ exports.login = async (req, res) => {
     const user = await User.findOne({
       $or: [{ email: login }, { username: login }],
     }).select("+password");
+
+    // For security, use a generic message for both user not found and wrong password
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "Invalid email/username or password",
+        });
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "Invalid email/username or password",
+        });
     }
 
     const accessToken = generateAccessToken(user._id);
@@ -120,7 +154,12 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Login Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An unexpected server error occurred.",
+      error: error.message,
+    });
   }
 };
 
@@ -131,7 +170,9 @@ exports.updateProfile = async (req, res) => {
     const user = await User.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Sanitize the user object right after loading to handle legacy avatar strings
@@ -216,13 +257,36 @@ exports.updateProfile = async (req, res) => {
       user: sanitizedUser,
     });
   } catch (error) {
-    // Provide more detailed error messages for validation errors
+    console.error("Update Profile Error:", error);
+
+    // Handle Mongoose validation errors
     if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ message: "Validation error", errors: error.errors });
+      const formattedErrors = Object.keys(error.errors).map((key) => ({
+        field: key,
+        message: error.errors[key].message,
+      }));
+      return res.status(400).json({
+        success: false,
+        message: "Profile update failed due to validation errors",
+        errors: formattedErrors,
+      });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+
+    // Handle potential Cloudinary errors
+    if (error.http_code) {
+      return res
+        .status(error.http_code)
+        .json({
+          success: false,
+          message: `Cloudinary error: ${error.message}`,
+        });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "An unexpected server error occurred while updating profile.",
+      error: error.message,
+    });
   }
 };
 
