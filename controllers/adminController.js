@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const Product = require("../models/Product");
 const cloudinary = require("cloudinary").v2;
+const asyncHandler = require("express-async-handler");
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/admin/users
@@ -143,129 +144,112 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// @desc    Update product (Admin only)
+// @desc    Update a product
 // @route   PUT /api/admin/products/:id
 // @access  Private/Admin
-exports.updateProduct = async (req, res) => {
-  try {
-    const { params, body, files } = req;
+exports.updateProduct = asyncHandler(async (req, res, next) => {
+  let product = await Product.findById(req.params.id);
 
-    const product = await Product.findById(params.id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  // Update simple text/number/boolean fields
+  const simpleFields = [
+    "name",
+    "description",
+    "price",
+    "stock",
+    "isFeatured",
+    "brand",
+    "sku",
+  ];
+  simpleFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      product[field] = req.body[field];
     }
+  });
 
-    // --- Prepare Update Data ---
-    const updateData = {};
-
-    // Handle simple string fields from the model
-    ["name", "description", "category", "gender"].forEach((field) => {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field];
-      }
-    });
-
-    // Handle numeric fields from the model
-    ["price", "inStock"].forEach((field) => {
-      if (body[field] !== undefined) {
-        updateData[field] = Number(body[field]);
-      }
-    });
-
-    // Handle boolean fields from the model
-    if (body.isFeatured !== undefined) {
-      updateData.isFeatured = body.isFeatured === "true";
-    }
-
-    // Handle JSON fields from the model (only 'sizes' in this case)
-    if (body.sizes && typeof body.sizes === "string") {
+  // Update fields that are sent as JSON strings
+  const jsonFields = ["category", "tags"];
+  jsonFields.forEach((field) => {
+    if (req.body[field]) {
       try {
-        updateData.sizes = JSON.parse(body.sizes);
+        product[field] = JSON.parse(req.body[field]);
       } catch (e) {
-        return res.status(400).json({
-          message: `Invalid JSON format for field 'sizes'.`,
-        });
+        res.status(400);
+        throw new Error(`Invalid JSON for field: ${field}`);
       }
     }
+  });
 
-    // --- Handle Image Processing ---
-    const processImages = (
-      imageType // 'images' or 'lookImages'
-    ) => {
-      let imagesToKeep = [];
-      const bodyImages = body[imageType];
-      const existingImages = product[imageType].map((img) => img.toObject());
+  // Handle 'images' replacement
+  if (req.files && req.files.images && req.files.images.length > 0) {
+    // Delete all old images from Cloudinary
+    if (product.images && product.images.length > 0) {
+      await Promise.all(
+        product.images.map((img) => cloudinary.uploader.destroy(img.public_id))
+      );
+    }
+    // Replace with new images
+    product.images = req.files.images.map((file) => ({
+      public_id: file.filename,
+      url: file.path,
+    }));
+  }
 
-      if (bodyImages && typeof bodyImages === "string") {
-        try {
-          imagesToKeep = JSON.parse(bodyImages);
-        } catch (e) {
-          throw new Error(
-            `Invalid JSON format for '${imageType}'. Must be a stringified array.`
-          );
-        }
-      } else if (bodyImages === undefined) {
-        imagesToKeep = existingImages;
-      } else {
-        throw new Error(
-          `Invalid format for '${imageType}'. Must be a stringified array.`
-        );
-      }
-
-      const imagesToDelete = existingImages
-        .filter(
-          (dbImg) =>
-            !imagesToKeep.some(
-              (keepImg) => keepImg.public_id === dbImg.public_id
-            )
+  // Handle 'lookImages' replacement
+  if (req.files && req.files.lookImages && req.files.lookImages.length > 0) {
+    // Delete all old look images from Cloudinary
+    if (product.lookImages && product.lookImages.length > 0) {
+      await Promise.all(
+        product.lookImages.map((img) =>
+          cloudinary.uploader.destroy(img.public_id)
         )
-        .map((img) => img.public_id);
-
-      const newImages =
-        files && files[imageType]
-          ? files[imageType].map((file) => ({
-              url: file.path,
-              public_id: file.filename,
-            }))
-          : [];
-
-      return {
-        finalImages: [...imagesToKeep, ...newImages],
-        deletePromises:
-          imagesToDelete.length > 0
-            ? cloudinary.api.delete_resources(imagesToDelete)
-            : Promise.resolve(),
-      };
-    };
-
-    const { finalImages, deletePromises: deleteImagesPromise } =
-      processImages("images");
-    const {
-      finalImages: finalLookImages,
-      deletePromises: deleteLookImagesPromise,
-    } = processImages("lookImages");
-
-    await Promise.all([deleteImagesPromise, deleteLookImagesPromise]);
-
-    updateData.images = finalImages;
-    updateData.lookImages = finalLookImages;
-
-    // --- Perform Update ---
-    const updatedProduct = await Product.findByIdAndUpdate(
-      params.id,
-      { $set: updateData },
-      { new: true, runValidators: true, context: "query" }
-    );
-
-    res.json({ success: true, product: updatedProduct });
-  } catch (error) {
-    console.error("Update Product Error:", error);
-    if (
-      error.message.includes("Invalid format") ||
-      error.message.includes("Invalid JSON")
-    ) {
-      return res.status(400).json({ message: error.message });
+      );
     }
+    // Replace with new look images
+    product.lookImages = req.files.lookImages.map((file) => ({
+      public_id: file.filename,
+      url: file.path,
+    }));
+  }
+
+  const updatedProduct = await product.save();
+
+  res.status(200).json(updatedProduct);
+});
+
+// @desc    Create product (Admin only)
+// @route   POST /api/admin/products
+// @access  Private/Admin
+exports.createProduct = async (req, res) => {
+  try {
+    const { body, files } = req;
+
+    // Map uploaded files to the format expected by the schema
+    const images = files.images
+      ? files.images.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+    const lookImages = files.lookImages
+      ? files.lookImages.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
+
+    const product = await Product.create({
+      ...body,
+      images,
+      lookImages,
+    });
+
+    res.status(201).json({ success: true, product });
+  } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

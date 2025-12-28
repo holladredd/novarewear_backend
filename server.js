@@ -20,8 +20,11 @@ app.use(
     credentials: true,
   })
 );
-// Body parser
-app.use(express.json());
+// Body parser - Increase limit to handle larger payloads like file uploads
+app.use(express.json({ limit: "50mb" }));
+app.use(
+  express.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 })
+);
 
 // Passport middleware
 app.use(passport.initialize());

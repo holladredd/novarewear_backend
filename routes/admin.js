@@ -30,8 +30,6 @@ router
   .route("/products")
   .get(getProducts)
   .post(
-    protect,
-    admin,
     upload.fields([
       { name: "images", maxCount: 10 },
       { name: "lookImages", maxCount: 10 },
@@ -43,8 +41,6 @@ router
   .route("/products/:id")
   .get(getProductById)
   .put(
-    protect,
-    admin,
     upload.fields([
       { name: "images", maxCount: 10 },
       { name: "lookImages", maxCount: 10 },
