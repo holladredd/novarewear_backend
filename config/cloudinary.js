@@ -12,8 +12,8 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "novare",
-    format: async (req, file) => "webp", // supports promises as well
-    public_id: (req, file) => file.originalname.split(".")[0],
+    format: async (req, file) => "webp", // Force format to webp for optimization
+    public_id: (req, file) => Date.now().toString(), // Generate a unique public_id using a timestamp
   },
 });
 
