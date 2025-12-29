@@ -114,146 +114,133 @@ exports.getProductById = async (req, res) => {
 // @desc    Create product (Admin only)
 // @route   POST /api/admin/products
 // @access  Private/Admin
-exports.createProduct = async (req, res) => {
-  try {
-    const { body, files } = req;
+exports.createProduct = asyncHandler(async (req, res) => {
+  const { name, description, price, brand, sku, stock, isFeatured } = req.body;
 
-    // Map uploaded files to the format expected by the schema
-    const images = files.images
-      ? files.images.map((file) => ({
-          url: file.path,
-          public_id: file.filename,
-        }))
-      : [];
-    const lookImages = files.lookImages
-      ? files.lookImages.map((file) => ({
-          url: file.path,
-          public_id: file.filename,
-        }))
-      : [];
+  // Safely parse JSON fields, providing empty arrays as fallbacks.
+  const category = req.body.category ? JSON.parse(req.body.category) : [];
+  const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+  const sizes = req.body.sizes ? JSON.parse(req.body.sizes) : [];
 
-    const product = await Product.create({
-      ...body,
-      images,
-      lookImages,
+  const images = [];
+  if (req.files && req.files.images && req.files.images.length > 0) {
+    req.files.images.forEach((file) => {
+      images.push({ public_id: file.filename, url: file.path });
     });
-
-    res.status(201).json({ success: true, product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
   }
-};
+
+  const lookImages = [];
+  if (req.files && req.files.lookImages && req.files.lookImages.length > 0) {
+    req.files.lookImages.forEach((file) => {
+      lookImages.push({ public_id: file.filename, url: file.path });
+    });
+  }
+
+  const product = await Product.create({
+    name,
+    description,
+    price,
+    brand,
+    sku,
+    stock,
+    isFeatured,
+    category,
+    tags,
+    sizes,
+    images,
+    lookImages,
+  });
+
+  res.status(201).json({ success: true, product });
+});
 
 // @desc    Update a product
 // @route   PUT /api/admin/products/:id
 // @access  Private/Admin
+// controllers/adminController.js
 exports.updateProduct = asyncHandler(async (req, res, next) => {
-  let product = await Product.findById(req.params.id);
+  console.log("=== UPDATE DEBUG ===");
+  console.log("Body keys:", Object.keys(req.body));
+  console.log("Files present:", !!req.files);
+  console.log("Images count:", req.files?.images?.length || 0);
 
+  const product = await Product.findById(req.params.id);
   if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
 
-  // Update simple text/number/boolean fields
-  const simpleFields = [
+  // ✅ Update text fields
+  const fields = [
     "name",
     "description",
     "price",
-    "stock",
+    "category",
+    "inStock",
     "isFeatured",
-    "brand",
-    "sku",
   ];
-  simpleFields.forEach((field) => {
+  fields.forEach((field) => {
     if (req.body[field] !== undefined) {
       product[field] = req.body[field];
     }
   });
 
-  // Update fields that are sent as JSON strings
-  const jsonFields = ["category", "tags"];
-  jsonFields.forEach((field) => {
-    if (req.body[field]) {
-      try {
-        product[field] = JSON.parse(req.body[field]);
-      } catch (e) {
-        res.status(400);
-        throw new Error(`Invalid JSON for field: ${field}`);
-      }
+  // ✅ Parse sizes
+  if (req.body.sizes) {
+    try {
+      product.sizes = JSON.parse(req.body.sizes);
+    } catch (e) {
+      console.warn("Sizes parse error:", e);
     }
-  });
-
-  // Handle 'images' replacement
-  if (req.files && req.files.images && req.files.images.length > 0) {
-    // Delete all old images from Cloudinary
-    if (product.images && product.images.length > 0) {
-      await Promise.all(
-        product.images.map((img) => cloudinary.uploader.destroy(img.public_id))
-      );
-    }
-    // Replace with new images
-    product.images = req.files.images.map((file) => ({
-      public_id: file.filename,
-      url: file.path,
-    }));
   }
 
-  // Handle 'lookImages' replacement
-  if (req.files && req.files.lookImages && req.files.lookImages.length > 0) {
-    // Delete all old look images from Cloudinary
-    if (product.lookImages && product.lookImages.length > 0) {
+  // ✅ Handle images ONLY if files exist
+  if (req.files?.images?.length > 0) {
+    console.log("Replacing images:", req.files.images.length);
+
+    // Delete old images
+    if (product.images?.length > 0) {
       await Promise.all(
-        product.lookImages.map((img) =>
-          cloudinary.uploader.destroy(img.public_id)
+        product.images.map((img) =>
+          img.public_id
+            ? cloudinary.uploader.destroy(img.public_id)
+            : Promise.resolve()
         )
       );
     }
-    // Replace with new look images
-    product.lookImages = req.files.lookImages.map((file) => ({
-      public_id: file.filename,
+
+    // Add new images
+    product.images = req.files.images.map((file) => ({
       url: file.path,
+      public_id: file.filename,
     }));
   }
 
-  const updatedProduct = await product.save();
+  // ✅ Handle lookImages ONLY if files exist
+  if (req.files?.lookImages?.length > 0) {
+    console.log("Replacing lookImages:", req.files.lookImages.length);
 
-  res.status(200).json(updatedProduct);
-});
+    // Delete old lookImages
+    if (product.lookImages?.length > 0) {
+      await Promise.all(
+        product.lookImages.map((img) =>
+          img.public_id
+            ? cloudinary.uploader.destroy(img.public_id)
+            : Promise.resolve()
+        )
+      );
+    }
 
-// @desc    Create product (Admin only)
-// @route   POST /api/admin/products
-// @access  Private/Admin
-exports.createProduct = async (req, res) => {
-  try {
-    const { body, files } = req;
-
-    // Map uploaded files to the format expected by the schema
-    const images = files.images
-      ? files.images.map((file) => ({
-          url: file.path,
-          public_id: file.filename,
-        }))
-      : [];
-    const lookImages = files.lookImages
-      ? files.lookImages.map((file) => ({
-          url: file.path,
-          public_id: file.filename,
-        }))
-      : [];
-
-    const product = await Product.create({
-      ...body,
-      images,
-      lookImages,
-    });
-
-    res.status(201).json({ success: true, product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    // Add new lookImages
+    product.lookImages = req.files.lookImages.map((file) => ({
+      url: file.path,
+      public_id: file.filename,
+    }));
   }
-};
 
+  const updated = await product.save();
+  res.json({ success: true, product: updated });
+});
 // @desc    Delete product (Admin only)
 // @route   DELETE /api/admin/products/:id
 // @access  Private/Admin
